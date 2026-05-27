@@ -1,4 +1,4 @@
-import { del } from "@vercel/blob";
+import { del, put } from "@vercel/blob";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { env } from "@/lib/env";
@@ -24,6 +24,7 @@ const EXT_CONTENT_TYPE: Record<string, string> = {
   tif: "image/tiff",
   tiff: "image/tiff",
   webp: "image/webp",
+  pdf: "application/pdf",
 };
 
 /** Rejects path traversal; pathnames are server-generated but validate anyway. */
@@ -43,6 +44,24 @@ export async function putLocalObject(
   await fs.mkdir(path.dirname(full), { recursive: true });
   await fs.writeFile(full, data);
   return { url: `/api/files/${pathname}`, pathname };
+}
+
+/** Server-side put (used for generated PDFs). Blob in prod, disk in dev. */
+export async function putObject(
+  pathname: string,
+  data: Buffer,
+  contentType: string,
+): Promise<{ url: string; pathname: string }> {
+  if (storageMode() === "blob") {
+    const res = await put(pathname, data, {
+      access: "public",
+      contentType,
+      addRandomSuffix: false,
+      token: env.BLOB_READ_WRITE_TOKEN,
+    });
+    return { url: res.url, pathname: res.pathname };
+  }
+  return putLocalObject(pathname, data);
 }
 
 export async function readLocalObject(

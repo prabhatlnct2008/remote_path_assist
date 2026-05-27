@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // Match Next's automatic JSX runtime so .tsx (e.g. react-pdf) needs no React import.
+  esbuild: { jsx: "automatic" },
   test: {
     environment: "node",
     include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
