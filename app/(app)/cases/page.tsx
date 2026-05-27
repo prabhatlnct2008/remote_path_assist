@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { PriorityBadge, StatusBadge } from "@/components/case/Badges";
 import { currentUser } from "@/lib/auth/guards";
 import { getWorklist } from "@/lib/db/queries/cases";
+import { relativeTime, slaLabel } from "@/lib/utils/time";
 
 const EMPTY_STATE: Record<string, { title: string; cta: boolean }> = {
   requester: { title: "You haven't created any cases yet.", cta: true },
@@ -40,7 +42,62 @@ export default async function WorklistPage() {
           )}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">{rows.length} case(s).</p>
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-border text-xs text-muted-foreground">
+              <tr>
+                <th className="px-4 py-2 font-medium">Case</th>
+                <th className="px-4 py-2 font-medium">Age/Sex</th>
+                <th className="px-4 py-2 font-medium">Specimen</th>
+                <th className="px-4 py-2 font-medium">Priority</th>
+                <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">SLA</th>
+                <th className="px-4 py-2 font-medium">Created</th>
+                <th className="px-4 py-2 font-medium">Last activity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const sla = r.slaDueAt ? slaLabel(r.slaDueAt) : null;
+                return (
+                  <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                    <td className="px-4 py-2">
+                      <Link href={`/cases/${r.id}`} className="font-mono text-primary hover:underline">
+                        {r.caseNumber}
+                      </Link>
+                      {r.needsMoreMaterial && (
+                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+                          needs material
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      {r.age}/{r.sex}
+                    </td>
+                    <td className="px-4 py-2">{r.specimenType.replace(/_/g, " ")}</td>
+                    <td className="px-4 py-2">
+                      <PriorityBadge priority={r.priority} />
+                    </td>
+                    <td className="px-4 py-2">
+                      <StatusBadge status={r.status} />
+                    </td>
+                    <td className="px-4 py-2">
+                      {sla ? (
+                        <span className={sla.breached ? "text-red-600" : "text-muted-foreground"}>
+                          {sla.text}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-muted-foreground">{relativeTime(r.createdAt)}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{relativeTime(r.updatedAt)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
