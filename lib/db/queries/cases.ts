@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, like, sql, type SQL } from "drizzle-orm";
 import { canUserAccessCase, type SessionUser } from "@/lib/auth/guards";
 import { decrypt } from "@/lib/crypto";
 import { db } from "@/lib/db/client";
@@ -28,36 +28,79 @@ export interface WorklistRow {
   updatedAt: number;
 }
 
+export interface WorklistFilters {
+  search?: string;
+  statuses?: string[];
+  priorities?: string[];
+  needsMore?: boolean;
+  page?: number;
+}
+
+const cols = {
+  id: cases.id,
+  caseNumber: cases.caseNumber,
+  age: cases.age,
+  sex: cases.sex,
+  specimenType: cases.specimenType,
+  priority: cases.priority,
+  status: cases.status,
+  needsMoreMaterial: cases.needsMoreMaterial,
+  slaDueAt: cases.slaDueAt,
+  createdAt: cases.createdAt,
+  updatedAt: cases.updatedAt,
+};
+
 /**
  * Worklist scoped by role (PRODUCT §4.8): requesters see cases they created,
- * consultants see cases assigned to them, admins see all. Patient content is
- * never selected here — the worklist shows metadata only.
+ * consultants see cases assigned to them, admins see all. Metadata only.
+ * Search matches the case number; for admins it also matches the (decrypted)
+ * patient ref — O(n) decrypt-on-read, acceptable at pilot volume (ARCH §5).
  */
 export const getWorklist = cache(
-  async (userId: string, role: Role, page = 0): Promise<WorklistRow[]> => {
-    const cols = {
-      id: cases.id,
-      caseNumber: cases.caseNumber,
-      age: cases.age,
-      sex: cases.sex,
-      specimenType: cases.specimenType,
-      priority: cases.priority,
-      status: cases.status,
-      needsMoreMaterial: cases.needsMoreMaterial,
-      slaDueAt: cases.slaDueAt,
-      createdAt: cases.createdAt,
-      updatedAt: cases.updatedAt,
-    };
+  async (userId: string, role: Role, filters: WorklistFilters = {}): Promise<WorklistRow[]> => {
+    const page = filters.page ?? 0;
+    const conds: SQL[] = [];
+    if (role === "requester") conds.push(eq(cases.createdBy, userId));
+    else if (role === "consultant") conds.push(eq(cases.assignedTo, userId));
+    if (filters.statuses?.length) {
+      conds.push(inArray(cases.status, filters.statuses as Case["status"][]));
+    }
+    if (filters.priorities?.length) {
+      conds.push(inArray(cases.priority, filters.priorities as Case["priority"][]));
+    }
+    if (filters.needsMore) conds.push(eq(cases.needsMoreMaterial, true));
 
-    const base = db.select(cols).from(cases);
-    const scoped =
-      role === "requester"
-        ? base.where(eq(cases.createdBy, userId))
-        : role === "consultant"
-          ? base.where(eq(cases.assignedTo, userId))
-          : base;
+    const q = filters.search?.trim();
 
-    return scoped
+    // Admin patient-ref search needs decrypt-on-read: fetch a capped set, then
+    // filter in JS by case number or decrypted patient ref.
+    if (q && role === "admin") {
+      const rows = await db
+        .select({ ...cols, patientRef: cases.patientRef })
+        .from(cases)
+        .where(conds.length ? and(...conds) : undefined)
+        .orderBy(priorityRank, desc(cases.createdAt))
+        .limit(500);
+      const needle = q.toLowerCase();
+      const matched = rows.filter((r) => {
+        if (r.caseNumber.toLowerCase().includes(needle)) return true;
+        try {
+          return decrypt(r.patientRef).toLowerCase().includes(needle);
+        } catch {
+          return false;
+        }
+      });
+      return matched
+        .slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+        .map(({ patientRef: _omit, ...rest }) => rest);
+    }
+
+    if (q) conds.push(like(cases.caseNumber, `%${q}%`));
+
+    return db
+      .select(cols)
+      .from(cases)
+      .where(conds.length ? and(...conds) : undefined)
       .orderBy(priorityRank, desc(cases.createdAt))
       .limit(PAGE_SIZE)
       .offset(page * PAGE_SIZE);

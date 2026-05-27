@@ -10,12 +10,23 @@ const EMPTY_STATE: Record<string, { title: string; cta: boolean }> = {
   admin: { title: "No cases in the system yet.", cta: true },
 };
 
-export default async function WorklistPage() {
+export default async function WorklistPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string; priority?: string; needs?: string }>;
+}) {
   const user = await currentUser();
   // Layout guarantees an active, named user; narrow for type-safety.
   if (!user) return null;
 
-  const rows = await getWorklist(user.id, user.role);
+  const sp = await searchParams;
+  const filters = {
+    search: sp.q,
+    statuses: sp.status ? sp.status.split(",") : undefined,
+    priorities: sp.priority ? sp.priority.split(",") : undefined,
+    needsMore: sp.needs === "1",
+  };
+  const rows = await getWorklist(user.id, user.role, filters);
   const empty = EMPTY_STATE[user.role];
 
   return (
@@ -31,6 +42,45 @@ export default async function WorklistPage() {
           </Link>
         )}
       </div>
+
+      <form className="flex flex-wrap items-end gap-3 rounded-lg border border-border p-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Search</label>
+          <input
+            name="q"
+            defaultValue={sp.q ?? ""}
+            placeholder={user.role === "admin" ? "Case number or MRN" : "Case number"}
+            className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Status</label>
+          <select name="status" defaultValue={sp.status ?? ""} className="rounded-md border border-border bg-background px-3 py-1.5 text-sm">
+            <option value="">All</option>
+            <option value="submitted">Submitted</option>
+            <option value="assigned">Assigned</option>
+            <option value="in_review">In review</option>
+            <option value="reported">Reported</option>
+            <option value="signed_out">Signed out</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Priority</label>
+          <select name="priority" defaultValue={sp.priority ?? ""} className="rounded-md border border-border bg-background px-3 py-1.5 text-sm">
+            <option value="">All</option>
+            <option value="stat">STAT</option>
+            <option value="urgent">Urgent</option>
+            <option value="routine">Routine</option>
+          </select>
+        </div>
+        <label className="flex items-center gap-1.5 text-sm">
+          <input type="checkbox" name="needs" value="1" defaultChecked={sp.needs === "1"} />
+          Needs material
+        </label>
+        <button className="rounded-md border border-border px-4 py-1.5 text-sm hover:bg-muted">
+          Apply
+        </button>
+      </form>
 
       {rows.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
