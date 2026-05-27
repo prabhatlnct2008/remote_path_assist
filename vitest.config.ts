@@ -1,0 +1,21 @@
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    environment: "node",
+    include: ["tests/unit/**/*.test.ts"],
+    // Injected into process.env before modules load so lib/env.ts validates.
+    env: {
+      NODE_ENV: "test",
+      AUTH_SECRET: "test-auth-secret",
+      DATABASE_URL: "file:test.db",
+      ENCRYPTION_KEY_V1: Buffer.alloc(32, 7).toString("base64"),
+      ENCRYPTION_KEY_V2: Buffer.alloc(32, 9).toString("base64"),
+    },
+  },
+  resolve: {
+    alias: {
+      "@": new URL(".", import.meta.url).pathname.replace(/\/$/, ""),
+    },
+  },
+});
