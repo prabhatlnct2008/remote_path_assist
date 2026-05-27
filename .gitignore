@@ -48,3 +48,6 @@ yarn-error.log*
 /playwright-report/
 /test-results/
 /coverage
+
+# local dev blob store
+/.blob-store/

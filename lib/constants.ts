@@ -50,3 +50,16 @@ export const CASE_STATUSES = [
 export type CaseStatus = (typeof CASE_STATUSES)[number];
 
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Image upload limits (PRODUCT §5.1).
+export const IMAGE_MAX_BYTES = 100 * 1024 * 1024;
+export const IMAGE_MAX_PER_CASE = 20;
+export const IMAGE_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/tiff",
+  "image/webp",
+] as const;
+
+// Uploads are allowed only in these statuses (PRODUCT §5.2).
+export const UPLOADABLE_STATUSES: CaseStatus[] = ["submitted", "assigned", "in_review"];

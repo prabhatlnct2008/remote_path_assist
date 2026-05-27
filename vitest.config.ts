@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
+    // Integration tests share a single file:test.db; run files serially to
+    // avoid SQLite write contention (SQLITE_BUSY).
+    fileParallelism: false,
     // Injected into process.env before modules load so lib/env.ts validates.
     env: {
       NODE_ENV: "test",
