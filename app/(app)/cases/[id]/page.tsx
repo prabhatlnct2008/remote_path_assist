@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { BriefCard } from "@/components/ai/BriefCard";
+import { ChatSidebar } from "@/components/ai/ChatSidebar";
 import { PriorityBadge, StatusBadge } from "@/components/case/Badges";
 import { CaseActions } from "@/components/case/CaseActions";
 import { CommentsPanel } from "@/components/case/CommentsPanel";
@@ -75,6 +77,10 @@ export default async function CaseDetailPage({
         />
       </header>
 
+      {isAssignedConsultant && (
+        <BriefCard caseId={id} status={c.aiBriefStatus} brief={c.aiBriefMd} />
+      )}
+
       <section className="rounded-lg border border-border p-5">
         <h2 className="mb-4 text-sm font-medium text-muted-foreground">Patient & clinical</h2>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -129,6 +135,8 @@ export default async function CaseDetailPage({
           />
         </section>
       )}
+
+      {isAssignedConsultant && <ChatSidebar caseId={id} />}
     </div>
   );
 }

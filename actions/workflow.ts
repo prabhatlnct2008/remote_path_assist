@@ -11,6 +11,7 @@ import { db } from "@/lib/db/client";
 import { cases, comments, users } from "@/lib/db/schema";
 import { sendEmail } from "@/lib/email";
 import { env } from "@/lib/env";
+import { generateBrief } from "@/lib/ai/brief";
 
 function caseLink(caseId: string) {
   return `${env.APP_URL}/cases/${caseId}`;
@@ -71,7 +72,9 @@ export async function assignCase(formData: FormData): Promise<ActionResult> {
     html: `<p>A new case has been assigned to you: <strong>${c.caseNumber}</strong></p><p><a href="${caseLink(caseId)}">Open case</a></p>`,
   });
 
-  // Phase 4 wires AI brief generation here (void generateBrief(caseId)).
+  // Kick off the pre-review brief without blocking the response (ARCH §8.1).
+  void generateBrief(caseId);
+
   revalidatePath(`/cases/${caseId}`);
   revalidatePath("/cases");
   return ok(undefined);
