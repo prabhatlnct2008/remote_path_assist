@@ -30,12 +30,17 @@ export function Shell({
               Worklist
             </Link>
             {user.role === "admin" && (
-              <Link
-                href="/admin/users"
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Users
-              </Link>
+              <>
+                <Link href="/admin/users" className="text-sm text-muted-foreground hover:text-foreground">
+                  Users
+                </Link>
+                <Link href="/admin/cases" className="text-sm text-muted-foreground hover:text-foreground">
+                  All cases
+                </Link>
+                <Link href="/admin/system" className="text-sm text-muted-foreground hover:text-foreground">
+                  System
+                </Link>
+              </>
             )}
           </div>
           <div className="flex items-center gap-4">
