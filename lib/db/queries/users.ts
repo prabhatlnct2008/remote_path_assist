@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { and, asc, desc, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { invitations, users } from "@/lib/db/schema";
 
@@ -31,4 +31,18 @@ export const getPendingInvitations = cache(async () => {
     .from(invitations)
     .where(isNull(invitations.acceptedAt))
     .orderBy(desc(invitations.createdAt));
+});
+
+/** Active consultants for the assignment dropdown (PRODUCT §8.1/§8.2). */
+export const getActiveConsultants = cache(async () => {
+  return db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      subspecialty: users.subspecialty,
+    })
+    .from(users)
+    .where(and(eq(users.role, "consultant"), eq(users.active, true)))
+    .orderBy(asc(users.name));
 });
