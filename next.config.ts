@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   serverExternalPackages: ["@libsql/client", "libsql"],
+  images: {
+    // Vercel Blob public URLs; local-dev blobs are same-origin (/api/files).
+    remotePatterns: [
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
+    ],
+  },
   async headers() {
     return [
       {
