@@ -63,9 +63,31 @@ export default async function CaseDetailPage({
               </span>
             )}
           </div>
-          <Link href={`/cases/${id}/audit`} className="text-sm text-primary hover:underline">
-            Audit trail
-          </Link>
+          <div className="flex items-center gap-4">
+            {isAssignedConsultant && ["in_review", "reported"].includes(status) && (
+              <Link href={`/cases/${id}/report`} className="text-sm text-primary hover:underline">
+                Draft report
+              </Link>
+            )}
+            {status === "signed_out" && contentVisible && (
+              <Link href={`/cases/${id}/report`} className="text-sm text-primary hover:underline">
+                View report
+              </Link>
+            )}
+            {status === "signed_out" && contentVisible && c.signedPdfUrl && (
+              <a
+                href={c.signedPdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white"
+              >
+                Download signed report
+              </a>
+            )}
+            <Link href={`/cases/${id}/audit`} className="text-sm text-primary hover:underline">
+              Audit trail
+            </Link>
+          </div>
         </div>
         <CaseActions
           caseId={id}
