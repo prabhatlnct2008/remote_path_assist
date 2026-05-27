@@ -1,8 +1,14 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ImageGallery } from "@/components/case/ImageGallery";
 import { PriorityBadge, StatusBadge } from "@/components/case/Badges";
+import { CaseActions } from "@/components/case/CaseActions";
+import { CommentsPanel } from "@/components/case/CommentsPanel";
+import { ImageGallery } from "@/components/case/ImageGallery";
 import { currentUser } from "@/lib/auth/guards";
+import { maybeOpenCase } from "@/lib/cases/transitions";
+import { getCommentThreads } from "@/lib/db/queries/comments";
 import { getCaseImages, getCaseView } from "@/lib/db/queries/cases";
+import { getActiveConsultants } from "@/lib/db/queries/users";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -26,31 +32,51 @@ export default async function CaseDetailPage({
   if (!view) notFound();
   const { case: c, contentVisible } = view;
 
+  // First open by the assigned consultant transitions assigned → in_review.
+  const status = await maybeOpenCase(id, user, c.status, c.assignedTo);
+
+  const isAssignedConsultant = user.role === "consultant" && c.assignedTo === user.id;
   const canUpload =
-    contentVisible && (c.status === "submitted" || c.status === "assigned" || c.status === "in_review");
-  const images = await getCaseImages(id);
+    contentVisible && ["submitted", "assigned", "in_review"].includes(status);
+  const canComment = contentVisible && status !== "signed_out";
+
+  const [images, threads] = await Promise.all([
+    getCaseImages(id),
+    contentVisible ? getCommentThreads(id) : Promise.resolve([]),
+  ]);
+  const consultants =
+    user.role === "admin" || isAssignedConsultant ? await getActiveConsultants() : [];
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Header band */}
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-        <div className="flex items-center gap-3">
-          <h1 className="font-mono text-lg font-semibold">{c.caseNumber}</h1>
-          <StatusBadge status={c.status} />
-          <PriorityBadge priority={c.priority} />
-          {c.needsMoreMaterial && (
-            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-              Needs more material
-            </span>
-          )}
+      <header className="flex flex-col gap-3 border-b border-border pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h1 className="font-mono text-lg font-semibold">{c.caseNumber}</h1>
+            <StatusBadge status={status} />
+            <PriorityBadge priority={c.priority} />
+            {c.needsMoreMaterial && (
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                Needs more material
+              </span>
+            )}
+          </div>
+          <Link href={`/cases/${id}/audit`} className="text-sm text-primary hover:underline">
+            Audit trail
+          </Link>
         </div>
+        <CaseActions
+          caseId={id}
+          status={status}
+          role={user.role}
+          isAssignedConsultant={isAssignedConsultant}
+          needsMoreMaterial={c.needsMoreMaterial}
+          consultants={consultants.map((x) => ({ id: x.id, name: x.name ?? x.email, subspecialty: x.subspecialty }))}
+        />
       </header>
 
-      {/* Patient & clinical card */}
       <section className="rounded-lg border border-border p-5">
-        <h2 className="mb-4 text-sm font-medium text-muted-foreground">
-          Patient & clinical
-        </h2>
+        <h2 className="mb-4 text-sm font-medium text-muted-foreground">Patient & clinical</h2>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Field label="Patient MRN">{view.patientRefDisplay}</Field>
           <Field label="Age">{c.age}</Field>
@@ -59,9 +85,7 @@ export default async function CaseDetailPage({
           <Field label="Created by">{view.createdByName ?? "—"}</Field>
           <Field label="Assigned to">{view.assignedToName ?? "Unassigned"}</Field>
           <Field label="Consent">
-            {c.consentConfirmed
-              ? new Date(c.consentAt).toLocaleString()
-              : "Not confirmed"}
+            {c.consentConfirmed ? new Date(c.consentAt).toLocaleString() : "Not confirmed"}
           </Field>
         </dl>
         <div className="mt-5">
@@ -74,19 +98,37 @@ export default async function CaseDetailPage({
         </div>
       </section>
 
-      {/* Images */}
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium text-muted-foreground">
-          Slide images ({images.length})
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Slide images ({images.length})
+          </h2>
+          {contentVisible && images.length > 0 && (
+            <Link href={`/cases/${id}/viewer`} className="text-sm text-primary hover:underline">
+              Open viewer →
+            </Link>
+          )}
+        </div>
         <ImageGallery
           caseId={id}
           images={images}
           canUpload={canUpload}
-          canDeleteAsUploader={c.status === "submitted" && contentVisible}
+          canDeleteAsUploader={status === "submitted" && contentVisible}
           currentUserId={user.id}
         />
       </section>
+
+      {contentVisible && (
+        <section className="flex flex-col gap-4">
+          <h2 className="text-sm font-medium text-muted-foreground">Comments</h2>
+          <CommentsPanel
+            caseId={id}
+            threads={threads}
+            currentUserId={user.id}
+            canComment={canComment}
+          />
+        </section>
+      )}
     </div>
   );
 }
