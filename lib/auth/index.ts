@@ -62,11 +62,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return user.email ? emailIsAllowed(user.email) : false;
     },
     async session({ session, user }) {
-      // Database strategy: `user` is the full row (adapter selects all columns).
+      // Database strategy hands us the full row (adapter selects all columns),
+      // which would otherwise leak sensitive fields (e.g. signing_password) via
+      // the public session endpoint. Rebuild session.user as a strict allowlist.
       const u = user as typeof user & { role: Role; active: boolean };
-      session.user.id = u.id;
-      session.user.role = u.role;
-      session.user.active = u.active;
+      session.user = {
+        id: u.id,
+        email: u.email,
+        emailVerified: u.emailVerified ?? null,
+        name: u.name,
+        image: u.image,
+        role: u.role,
+        active: u.active,
+      };
       return session;
     },
   },
