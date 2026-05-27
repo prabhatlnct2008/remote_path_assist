@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `case_events_case_prevhash_uq` ON `case_events` (`case_id`,`prev_hash`);

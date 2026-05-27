@@ -268,6 +268,9 @@ export const caseEvents = sqliteTable(
   (t) => [
     index("case_events_case_time_idx").on(t.caseId, t.occurredAt),
     index("case_events_case_id_desc_idx").on(t.caseId, t.id),
+    // Each prev_hash occurs once per case in a valid chain; this makes a
+    // concurrent fork a unique-constraint violation we retry on (ARCH §4.9).
+    uniqueIndex("case_events_case_prevhash_uq").on(t.caseId, t.prevHash),
     check(
       "case_events_actor_kind_chk",
       sql`${t.actorKind} in ('user','ai','system')`,

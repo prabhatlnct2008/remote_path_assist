@@ -8,6 +8,13 @@
       "when": 1779871221587,
       "tag": "0000_curvy_ser_duncan",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1779871383486,
+      "tag": "0001_talented_kid_colt",
+      "breakpoints": true
     }
   ]
 }
