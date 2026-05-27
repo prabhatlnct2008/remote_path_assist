@@ -17,11 +17,13 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.79",
     "@annotorious/openseadragon": "^3.8.2",
     "@auth/drizzle-adapter": "1.11.2",
     "@libsql/client": "0.17.3",
     "@paralleldrive/cuid2": "3.3.0",
     "@vercel/blob": "^2.4.0",
+    "ai": "^6.0.191",
     "drizzle-orm": "0.45.2",
     "next": "15.5.18",
     "next-auth": "5.0.0-beta.31",
@@ -29,6 +31,7 @@
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "react-markdown": "^10.1.0",
+    "sharp": "^0.34.5",
     "zod": "4.4.3"
   },
   "devDependencies": {
