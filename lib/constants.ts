@@ -63,3 +63,16 @@ export const IMAGE_CONTENT_TYPES = [
 
 // Uploads are allowed only in these statuses (PRODUCT §5.2).
 export const UPLOADABLE_STATUSES: CaseStatus[] = ["submitted", "assigned", "in_review"];
+
+// Annotation preset palette of 8 colors (PRODUCT §6.2).
+export const ANNOTATION_COLORS = [
+  "#F2A623",
+  "#E5484D",
+  "#30A46C",
+  "#0091FF",
+  "#8E4EC6",
+  "#F76808",
+  "#E93D82",
+  "#FFFFFF",
+] as const;
+export const ANNOTATION_LABEL_MAX = 200;
