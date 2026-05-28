@@ -1,0 +1,59 @@
+{
+  "name": "pathconsult",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.79",
+    "@annotorious/openseadragon": "^3.8.2",
+    "@auth/drizzle-adapter": "1.11.2",
+    "@libsql/client": "0.17.3",
+    "@node-rs/argon2": "^2.0.2",
+    "@paralleldrive/cuid2": "3.3.0",
+    "@react-pdf/renderer": "^4.5.1",
+    "@vercel/blob": "^2.4.0",
+    "ai": "^6.0.191",
+    "drizzle-orm": "0.45.2",
+    "next": "15.5.18",
+    "next-auth": "5.0.0-beta.31",
+    "openseadragon": "^6.0.2",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-markdown": "^10.1.0",
+    "sharp": "^0.34.5",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.0",
+    "@types/node": "22.19.19",
+    "@types/openseadragon": "^6.0.0",
+    "@types/react": "19.2.15",
+    "@types/react-dom": "19.2.3",
+    "drizzle-kit": "0.31.10",
+    "tailwindcss": "4.3.0",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  }
+}
