@@ -51,3 +51,5 @@ yarn-error.log*
 
 # local dev blob store
 /.blob-store/
+/build.db
+/build.db-*
