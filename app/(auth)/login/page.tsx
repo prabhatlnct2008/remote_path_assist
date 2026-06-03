@@ -43,7 +43,8 @@ export default async function LoginPage({
         Send sign-in link
       </button>
       <p className="text-center text-xs text-muted-foreground">
-        Access is by invitation only. A one-time link will be emailed to you.
+        A one-time sign-in link will be emailed to you. New users start as
+        requesters; an administrator can change your role afterwards.
       </p>
     </form>
   );
