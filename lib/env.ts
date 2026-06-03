@@ -34,8 +34,10 @@ const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   DATABASE_AUTH_TOKEN: z.string().optional().default(""),
 
-  // Field encryption — at least V1 required.
-  ENCRYPTION_KEY_V1: base64_32,
+  // Field encryption. The Zod check is loose so Next's build-time module
+  // collection (which has no real secrets) doesn't fail; the strict 32-byte
+  // validation happens lazily inside encryptionKeys() at first use.
+  ENCRYPTION_KEY_V1: z.string().optional().default(""),
 
   // External services — optional in dev; features degrade if absent.
   ANTHROPIC_API_KEY: z.string().optional().default(""),
@@ -47,15 +49,27 @@ const EnvSchema = z.object({
   SENTRY_DSN: z.string().optional().default(""),
 });
 
+// During `next build`, Next loads server modules to collect page data; we
+// don't require real secrets to be present at build time. Runtime is strict.
+const isBuildPhase =
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.env.SKIP_ENV_VALIDATION === "true";
+
 function parseEnv() {
   const parsed = EnvSchema.safeParse(process.env);
-  if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
-      .join("\n");
-    throw new Error(`Invalid environment configuration:\n${issues}`);
+  if (parsed.success) return parsed.data;
+  if (isBuildPhase) {
+    // Best-effort placeholders; the real values must be set at runtime.
+    return EnvSchema.parse({
+      ...process.env,
+      AUTH_SECRET: process.env.AUTH_SECRET || "__build_stub__",
+      DATABASE_URL: process.env.DATABASE_URL || "file:build.db",
+    });
   }
-  return parsed.data;
+  const issues = parsed.error.issues
+    .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
+    .join("\n");
+  throw new Error(`Invalid environment configuration:\n${issues}`);
 }
 
 export const env = parseEnv();
@@ -74,11 +88,13 @@ export function encryptionKeys(): Record<number, Buffer> {
     }
   }
   if (Object.keys(keys).length === 0) {
+    if (isBuildPhase) return { 1: Buffer.alloc(32) }; // stub for collect-page-data
     throw new Error("No valid ENCRYPTION_KEY_V{n} found in environment");
   }
   return keys;
 }
 
-export const CURRENT_KEY_VERSION = (() => {
+/** Lazy — evaluated at first use so module load doesn't require real keys. */
+export function currentKeyVersion(): number {
   return Math.max(...Object.keys(encryptionKeys()).map(Number));
-})();
+}

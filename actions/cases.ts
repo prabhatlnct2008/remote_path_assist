@@ -11,7 +11,7 @@ import { PRIORITIES, SPECIMEN_TYPES } from "@/lib/constants";
 import { encrypt } from "@/lib/crypto";
 import { db } from "@/lib/db/client";
 import { caseSequences, cases } from "@/lib/db/schema";
-import { CURRENT_KEY_VERSION } from "@/lib/env";
+import { currentKeyVersion } from "@/lib/env";
 
 const CreateCaseInput = z.object({
   patientRef: z.string().trim().min(1, "Patient MRN is required").max(64),
@@ -79,7 +79,7 @@ export async function createCase(
         consentConfirmed: true,
         consentAt: now,
         createdBy: guard.user.id,
-        encryptionKeyVersion: CURRENT_KEY_VERSION,
+        encryptionKeyVersion: currentKeyVersion(),
       })
       .returning({ id: cases.id, caseNumber: cases.caseNumber });
 
