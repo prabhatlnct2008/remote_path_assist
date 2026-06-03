@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/cron/sla-check", "schedule": "0 * * * *" },
+    { "path": "/api/cron/sla-check", "schedule": "0 8 * * *" },
     { "path": "/api/cron/blob-retention", "schedule": "0 3 1 * *" }
   ]
 }
