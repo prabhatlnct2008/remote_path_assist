@@ -3,7 +3,7 @@ import {
   createDecipheriv,
   randomBytes,
 } from "node:crypto";
-import { CURRENT_KEY_VERSION, encryptionKeys } from "@/lib/env";
+import { currentKeyVersion, encryptionKeys } from "@/lib/env";
 
 /**
  * Field-level AES-256-GCM encryption for columns marked [encrypted] in
@@ -28,7 +28,7 @@ function keyForVersion(version: number): Buffer {
 
 export function encrypt(
   plaintext: string,
-  keyVersion: number = CURRENT_KEY_VERSION,
+  keyVersion: number = currentKeyVersion(),
 ): string {
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv(ALGO, keyForVersion(keyVersion), iv);
