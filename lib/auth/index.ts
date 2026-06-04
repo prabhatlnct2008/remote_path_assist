@@ -17,19 +17,10 @@ import type { Role } from "@/types/next-auth";
 const MAGIC_LINK_TTL_SECONDS = 15 * 60; // PRODUCT §3.1
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // PRODUCT §3.3 (7-day idle)
 
-/** Invite-only: an email may sign in only if it already has a user, or an
- *  unaccepted, unexpired invitation exists (PRODUCT §2 — no self-signup). */
-async function emailIsAllowed(email: string): Promise<boolean> {
-  const existing = await db.query.users.findFirst({
-    where: eq(users.email, email),
-  });
-  if (existing) return true;
-
-  const invite = await db.query.invitations.findFirst({
-    where: and(eq(invitations.email, email), isNull(invitations.acceptedAt)),
-  });
-  return Boolean(invite && invite.expiresAt > Date.now());
-}
+// Open sign-in: any valid email may request a magic link. New users are
+// created as active `requester`s; admins can promote/demote/deactivate from
+// /admin/users. Pending invitations still apply their role and subspecialty
+// on first sign-in. (Deviates from PRODUCT §2 invite-only by deployment choice.)
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -59,7 +50,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async signIn({ user }) {
-      return user.email ? emailIsAllowed(user.email) : false;
+      return Boolean(user.email);
     },
     async session({ session, user }) {
       // Database strategy hands us the full row (adapter selects all columns),
@@ -79,9 +70,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   events: {
-    // First magic-link acceptance creates the user; copy role/subspecialty from
-    // the invitation and mark it accepted. The user stays inactive until an
-    // admin activates them (PRODUCT §2).
+    // First magic-link acceptance creates the user. Self-signup users land as
+    // active `requester`s (schema default role). If a pending invitation
+    // matches the email, copy its role/subspecialty and mark it accepted.
     async createUser({ user }) {
       if (!user.email) return;
       const invite = await db.query.invitations.findFirst({
@@ -90,16 +81,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           isNull(invitations.acceptedAt),
         ),
       });
-      if (!invite) return;
       const now = Date.now();
-      await db
-        .update(users)
-        .set({ role: invite.role as Role, subspecialty: invite.subspecialty, updatedAt: now })
-        .where(eq(users.id, user.id!));
-      await db
-        .update(invitations)
-        .set({ acceptedAt: now })
-        .where(eq(invitations.id, invite.id));
+      if (invite) {
+        await db
+          .update(users)
+          .set({
+            role: invite.role as Role,
+            subspecialty: invite.subspecialty,
+            active: true,
+            updatedAt: now,
+          })
+          .where(eq(users.id, user.id!));
+        await db
+          .update(invitations)
+          .set({ acceptedAt: now })
+          .where(eq(invitations.id, invite.id));
+      } else {
+        await db
+          .update(users)
+          .set({ active: true, updatedAt: now })
+          .where(eq(users.id, user.id!));
+      }
     },
   },
 });
