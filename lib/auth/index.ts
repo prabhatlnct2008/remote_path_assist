@@ -1,5 +1,5 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import NextAuth from "next-auth";
 import Resend from "next-auth/providers/resend";
 import { db } from "@/lib/db/client";
@@ -57,6 +57,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // which would otherwise leak sensitive fields (e.g. signing_password) via
       // the public session endpoint. Rebuild session.user as a strict allowlist.
       const u = user as typeof user & { role: Role; active: boolean };
+
+      // BOOTSTRAP_ADMIN_EMAIL escape hatch: any user signing in with this
+      // address is promoted to active admin if they aren't already. Idempotent.
+      if (
+        env.BOOTSTRAP_ADMIN_EMAIL &&
+        u.email.toLowerCase() === env.BOOTSTRAP_ADMIN_EMAIL.toLowerCase() &&
+        (u.role !== "admin" || !u.active)
+      ) {
+        await db
+          .update(users)
+          .set({ role: "admin", active: true, updatedAt: Date.now() })
+          .where(eq(users.id, u.id));
+        u.role = "admin";
+        u.active = true;
+      }
+
       session.user = {
         id: u.id,
         email: u.email,
@@ -82,6 +98,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         ),
       });
       const now = Date.now();
+
+      // First user in the system bootstraps as admin (only fires when the
+      // adapter has just inserted the one and only row).
+      const [{ n }] = await db.select({ n: count() }).from(users);
+      const isFirstUser = Number(n) === 1;
+
       if (invite) {
         await db
           .update(users)
@@ -99,7 +121,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       } else {
         await db
           .update(users)
-          .set({ active: true, updatedAt: now })
+          .set({
+            role: isFirstUser ? "admin" : "requester",
+            active: true,
+            updatedAt: now,
+          })
           .where(eq(users.id, user.id!));
       }
     },
