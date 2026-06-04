@@ -47,6 +47,9 @@ const EnvSchema = z.object({
   BLOB_READ_WRITE_TOKEN: z.string().optional().default(""),
   CRON_SECRET: z.string().optional().default(""),
   SENTRY_DSN: z.string().optional().default(""),
+  // Any user signing in with this email is auto-promoted to admin (PathConsult
+  // bootstrap escape hatch — useful on a fresh deploy when no admin exists).
+  BOOTSTRAP_ADMIN_EMAIL: z.string().optional().default(""),
 });
 
 // During `next build`, Next loads server modules to collect page data; we
